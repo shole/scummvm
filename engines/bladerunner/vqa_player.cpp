@@ -30,6 +30,11 @@
 
 #include "common/system.h"
 
+#include "common/rect.h"
+#include "image/png.h"
+
+using namespace std;
+
 namespace BladeRunner {
 
 bool VQAPlayer::open() {
@@ -153,6 +158,31 @@ int VQAPlayer::update(bool forceDraw, bool advanceFrame, bool useTime, Graphics:
 		_frame = _frameNext;
 		_decoder.readFrame(_frameNext, kVQAReadVideo);
 		_decoder.decodeVideoFrame(customSurface != nullptr ? customSurface : _surface, _frameNext);
+
+		Graphics::Surface *surface = customSurface != nullptr ? customSurface : _surface;
+
+		//if (customSurface == nullptr) {
+		Common::String name = Common::String::format("%s_%04d.png", _name.c_str(), _frameNext);
+			
+		Common::Path framefilename = Common::Path(name);
+
+		Common::FSNode file = Common::FSNode(framefilename);
+		if (!file.exists()) {
+						
+			//Common::SeekableWriteStream *stream = file.createWriteStream();				
+
+			//bool writePNG(Common::WriteStream &out, const Graphics::Surface &input, const byte *palette) {
+
+			Common::Rect r = Common::Rect(surface->w,surface->h);
+			//r.left = 0;
+			//Image::writePNG(stream->writeStream, _surface->getSubArea(r));
+			Common::SeekableWriteStream *writer = file.createWriteStream();
+			Image::writePNG(*writer, surface->getSubArea(r));
+			writer->flush();
+			writer->finalize();
+		}
+		//}
+
 
 		int maxAllowedAudioPreloadedFrames = kMaxAudioPreloadedFrames;
 		if (_frameEnd - _frameNext < kMaxAudioPreloadedFrames - 1) {
