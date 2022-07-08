@@ -155,33 +155,49 @@ int VQAPlayer::update(bool forceDraw, bool advanceFrame, bool useTime, Graphics:
 		// Note, we use unsigned difference to avoid potential time overflow issues
 		result = -1;
 	} else if (advanceFrame) {
-		_frame = _frameNext;
-		_decoder.readFrame(_frameNext, kVQAReadVideo);
-		_decoder.decodeVideoFrame(customSurface != nullptr ? customSurface : _surface, _frameNext);
-
 		Graphics::Surface *surface = customSurface != nullptr ? customSurface : _surface;
 
-		//if (customSurface == nullptr) {
-		Common::String name = Common::String::format("%s_%04d.png", _name.c_str(), _frameNext);
-			
-		Common::Path framefilename = Common::Path(name);
 
-		Common::FSNode file = Common::FSNode(framefilename);
+		_frame = _frameNext;
+		_decoder.readFrame(_frameNext, kVQAReadVideo);
+
+
+		Common::String name;
+
+		Common::Path framefilename;
+
+		Common::FSNode file;
+
+		if (_decoder._header.width == 640 && _decoder._header.height == 480) {
+			name = Common::String::format("%s_%04d.png", _name.c_str(), _frameNext);
+		} else {
+			name = Common::String::format("%s_%d-%d_%dx%d_a_%04d.png", _name.c_str(), _decoder._header.offsetX, _decoder._header.offsetY, _decoder._header.width, _decoder._header.height, _frameNext);
+
+			surface->fillRect(Common::Rect(surface->w, surface->h), 65535);
+		}
+
+
+		_decoder.decodeVideoFrame(surface, _frameNext);
+
+
+		framefilename = Common::Path(name);
+		file = Common::FSNode(framefilename);
 		if (!file.exists()) {
-						
+
 			//Common::SeekableWriteStream *stream = file.createWriteStream();				
 
 			//bool writePNG(Common::WriteStream &out, const Graphics::Surface &input, const byte *palette) {
 
-			Common::Rect r = Common::Rect(surface->w,surface->h);
+
+			Common::Rect r = Common::Rect(surface->w, surface->h);
+			//Common::Rect r = Common::Rect(_decoder._header.width, _decoder._header.height, _decoder._header.offsetX, _decoder._header.offsetY);
 			//r.left = 0;
 			//Image::writePNG(stream->writeStream, _surface->getSubArea(r));
 			Common::SeekableWriteStream *writer = file.createWriteStream();
 			Image::writePNG(*writer, surface->getSubArea(r));
-			writer->flush();
 			writer->finalize();
+			delete writer;
 		}
-		//}
 
 
 		int maxAllowedAudioPreloadedFrames = kMaxAudioPreloadedFrames;
